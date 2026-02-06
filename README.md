@@ -48,3 +48,93 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+---
+
+## Troubleshooting (important for production)
+
+This project uses **Expo Router** (file-based routing) + React state. Two common issues you may hit during development are:
+
+### 1) `Maximum update depth exceeded` (infinite re-render loop)
+
+**What it means**
+
+React detected a loop where a component keeps calling `setState` (directly or indirectly) and never stops.
+
+**What caused it here**
+
+Our splash screen (`app/(splash)/welcome.tsx`) had an **auto-advance timer** (Loading → Slide 2). On web, scroll/momentum events can be flaky, and our effect could re-trigger in a way that repeatedly scheduled state updates.
+
+**How we fixed it**
+
+We made the auto-advance run **only once** using a `ref` flag:
+
+```ts
+const hasAutoAdvancedRef = useRef(false);
+
+useEffect(() => {
+  if (hasAutoAdvancedRef.current) return;
+  const id = setTimeout(() => {
+    setCurrentIndex((prev) => {
+      if (prev !== 0) return prev;
+      hasAutoAdvancedRef.current = true;
+      scrollRef.current?.scrollTo({ x: SCREEN_WIDTH, animated: true });
+      return 1;
+    });
+  }, 2500);
+  return () => clearTimeout(id);
+}, []);
+```
+
+**What is `hasAutoAdvancedRef`?**
+
+- `useRef(...)` stores a value that **does not trigger re-renders** when it changes.
+- We use it as a simple “did we already auto-advance?” flag.
+- This prevents calling `setCurrentIndex` repeatedly when we only want a single auto-advance.
+
+**If this happens again, use this approach**
+
+- **Step 1:** Find the component that is updating state in a loop (look at the top of the error stack).
+- **Step 2:** Search for:
+  - `setState(...)` inside `useEffect` / `useLayoutEffect`
+  - effects that depend on state they update (e.g. `useEffect(..., [state])` + `setState(...)`)
+- **Step 3:** Add a guard:
+  - Compare previous vs next (only set when different)
+  - Or use a `useRef` boolean to ensure a one-time action
+- **Step 4:** Clear timers / subscriptions in cleanup (`return () => ...`)
+
+### 2) Expo Router group paths vs URL paths (web)
+
+**Symptom**
+
+- You navigate to a route and the app seems to “bounce” or get stuck.
+- Sometimes this also shows up as repeated redirects (which can lead to update depth errors).
+
+**Cause**
+
+In Expo Router, folders in parentheses are **route groups**:
+
+- `app/(auth)/login.tsx` is reachable at **`/login`**
+- `app/(splash)/welcome.tsx` is reachable at **`/welcome`**
+
+The `(auth)` / `(splash)` part is **not in the URL**.
+
+**Fix**
+
+Use URL-safe paths in `constants/routes.ts` for web:
+
+- `ROUTES.AUTH.LOGIN = '/login'`
+- `ROUTES.SPLASH.WELCOME = '/welcome'`
+
+### 3) When your UI doesn’t reflect code changes
+
+If you edit a screen (like changing “Lawyers” → “Lawyerssss”) but the UI doesn’t change:
+
+- Stop the dev server and restart with cache clear:
+
+```bash
+npx expo start -c
+```
+
+- Hard reload the browser: `Ctrl+Shift+R`
+

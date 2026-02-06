@@ -1,98 +1,302 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { AppColors, ROUTES } from '@/constants';
+import { useAuth } from '@/contexts';
+
+const DUMMY_LAWYERS = [
+  { id: '1', name: 'Amar', rate: '₹13/min', avatar: 'A' },
+  { id: '2', name: 'Amrita', rate: '₹08/min', avatar: 'A' },
+  { id: '3', name: 'Prerna', rate: '₹12/min', avatar: 'P' },
+  { id: '4', name: 'Rake', rate: '₹10/min', avatar: 'R' },
+];
+
+const DUMMY_CATEGORIES = [
+  { id: '1', title: 'Family Lawyer', icon: 'people' },
+  { id: '2', title: 'Criminal Lawyer', icon: 'shield-checkmark' },
+  { id: '3', title: 'Corporate Lawyer', icon: 'business' },
+  { id: '4', title: 'Property Lawyer', icon: 'home' },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <View style={styles.container}>
+
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.welcomeSection}>
+          <View>
+            <Text style={styles.welcomeText}>
+              Hi, {user?.name ?? 'User'} 👋
+            </Text>
+            <Text style={styles.tagline}>Legal Advice, Simplified</Text>
+          </View>
+          <View style={styles.scaleIcon}>
+            <Image source={require('@/assets/court/scale2.png')} style={styles.logo} />
+          </View>
+        </View>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color={AppColors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by lawyer, city or case"
+            placeholderTextColor={AppColors.textSecondary}
+            editable={false}
+          />
+          <Ionicons name="mic-outline" size={22} color={AppColors.textSecondary} />
+        </View>
+
+        <View style={styles.actionCards}>
+          <TouchableOpacity style={styles.actionCard} activeOpacity={0.8}>
+            <Ionicons name="call" size={28} color={AppColors.primary} />
+            <Text style={styles.actionCardText}>Call to Lawyers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCard} activeOpacity={0.8}>
+            <Ionicons name="chatbubble-ellipses" size={28} color={AppColors.primary} />
+            <Text style={styles.actionCardText}>Chat with Lawyers</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Lawyers</Text>
+            <TouchableOpacity onPress={() => router.push(ROUTES.TABS.LAWYERS)}>
+              <Text style={styles.viewAll}>View All →</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {DUMMY_LAWYERS.map((lawyer) => (
+              <View key={lawyer.id} style={styles.lawyerCard}>
+                <View style={styles.lawyerAvatar}>
+                  <Text style={styles.lawyerAvatarText}>{lawyer.avatar}</Text>
+                </View>
+                <Text style={styles.lawyerName}>{lawyer.name}</Text>
+                <Text style={styles.lawyerRate}>{lawyer.rate}</Text>
+                <TouchableOpacity style={styles.chatButton} activeOpacity={0.8}>
+                  <Text style={styles.chatButtonText}>Chat</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAll}>View All →</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
+            {DUMMY_CATEGORIES.map((cat) => (
+              <TouchableOpacity key={cat.id} style={styles.categoryCard} activeOpacity={0.8}>
+                <View style={styles.categoryIconWrap}>
+                  <Ionicons name={cat.icon as any} size={32} color={AppColors.primary} />
+                </View>
+                <Text style={styles.categoryTitle}>{cat.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: AppColors.background,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  welcomeSection: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding:20,
+    backgroundColor:'#ebf2ff',
+    borderRadius:20,
+  },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: AppColors.text,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  logo: {
+    width: 80,
+    height: 70,
+    borderRadius:100,
+    marginRight:20,
+  },
+  scaleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: AppColors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: AppColors.text,
+  },
+  actionCards: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    paddingVertical: 20,
     alignItems: 'center',
     gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  actionCardText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: AppColors.text,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: AppColors.text,
+  },
+  viewAll: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: '500',
+  },
+  horizontalList: {
+    gap: 12,
+    paddingRight: 16,
+  },
+  lawyerCard: {
+    width: 140,
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  lawyerAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: AppColors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  lawyerAvatarText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: AppColors.primary,
+  },
+  lawyerName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: AppColors.text,
+    marginBottom: 2,
+  },
+  lawyerRate: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    marginBottom: 8,
+  },
+  chatButton: {
+    backgroundColor: AppColors.success,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  chatButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.white,
+  },
+  categoryCard: {
+    width: 140,
+    height:120,
+    backgroundColor: AppColors.white,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  categoryIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: AppColors.periwinkleBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  categoryTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: AppColors.text,
+    textAlign: 'center',
   },
 });
