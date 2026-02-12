@@ -1,18 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Navbar, Sidebar } from '@/components/layout';
-
 import { AppColors } from '@/constants/theme';
 
 export default function TabLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingBottom: Platform.OS === 'web' ? 0 : 0,
+
+        },
+      ]}
+    >
       {/* 🔹 Global Navbar */}
       <Navbar onMenuPress={() => setSidebarOpen(true)} />
 
@@ -25,8 +34,11 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: '#cadcff',
             borderTopColor: AppColors.border,
-            height: 60,
-            paddingTop: 3,
+
+            // 🔥 FIXED TAB BAR HEIGHT
+            height: 60 + insets.bottom,
+            paddingTop: 6,
+            paddingBottom: insets.bottom,
           },
           tabBarButton: HapticTab,
         }}
@@ -70,15 +82,13 @@ export default function TabLayout() {
             ),
           }}
         />
-        
 
-        {/* Hidden routes */}
+        {/* 🔒 Hidden routes */}
         <Tabs.Screen name="my-cases" options={{ href: null }} />
         <Tabs.Screen name="chat-history" options={{ href: null }} />
         <Tabs.Screen name="change-password" options={{ href: null }} />
         <Tabs.Screen name="about" options={{ href: null }} />
         <Tabs.Screen name="lawyers/[id]" options={{ href: null }} />
-
       </Tabs>
 
       {/* 🔹 Global Sidebar */}
@@ -93,5 +103,12 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F3F7FF',
+
+    // 🌐 Web breathing space
+    ...(Platform.OS === 'web' && {
+      paddingTop: 12,
+      paddingBottom: 12,
+    }),
   },
 });

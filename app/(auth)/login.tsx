@@ -2,30 +2,48 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  Alert,
 } from 'react-native';
 
 import { AppColors, ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
 
 export default function LoginScreen() {
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const { login } = useAuth();
   const router = useRouter();
 
   const handleLogin = async () => {
-    await login(phone || '9876543210', password || 'dummy');
-    router.replace(ROUTES.TABS.ROOT);
+    try {
+      if (!email || !password) {
+        Alert.alert('Error', 'Please enter email and password');
+        return;
+      }
+
+      setLoading(true);
+
+      await login(email, password);
+
+      router.replace(ROUTES.TABS.ROOT);
+
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,30 +56,48 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={24} color={AppColors.primary} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
         <View style={styles.logoContainer}>
-         <Image source={require('@/assets/court/court-k-logo.png')} style={styles.logo} />
+          <Image
+            source={require('@/assets/court/court-k-logo.png')}
+            style={styles.logo}
+          />
         </View>
 
         <Text style={styles.title}>Login</Text>
 
+        {/* Email Input */}
         <View style={styles.inputContainer}>
-          <Ionicons name="call-outline" size={20} color={AppColors.primaryLight} />
+          <Ionicons
+            name="mail-outline"
+            size={20}
+            color={AppColors.primaryLight}
+          />
           <TextInput
             style={styles.input}
-            placeholder="Phone No."
+            placeholder="Email"
             placeholderTextColor={AppColors.textSecondary}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
         </View>
+
+        {/* Password Input */}
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color={AppColors.primaryLight} />
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color={AppColors.primaryLight}
+          />
           <TextInput
             style={styles.input}
             placeholder="Password"
@@ -70,7 +106,9 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+          >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={22}
@@ -79,19 +117,23 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.optionsRow}>
-          <Text style={styles.optionText}>Remember me</Text>
-          <TouchableOpacity>
-            <Text style={styles.linkText}>Forgot Password?</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        {/* Login Button */}
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={handleLogin}
+          activeOpacity={0.8}
+          disabled={loading}
+        >
+          <Text style={styles.loginButtonText}>
+            {loading ? 'Logging in...' : 'Login'}
+          </Text>
         </TouchableOpacity>
 
+        {/* Sign Up Link */}
         <View style={styles.signupRow}>
-          <Text style={styles.signupPrompt}>Not have an account ?</Text>
+          <Text style={styles.signupPrompt}>
+            Don't have an account?
+          </Text>
           <Link href={ROUTES.AUTH.SIGNUP} asChild>
             <TouchableOpacity>
               <Text style={styles.signupLink}>Sign Up</Text>
@@ -107,6 +149,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.white,
+    paddingTop: 25,
   },
   scrollContent: {
     flexGrow: 1,
@@ -132,26 +175,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  logoOval: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: AppColors.primary,
-    gap: 12,
-  },
-  logoCourt: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  logoKutchery: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: AppColors.primary,
-  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -173,20 +196,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: AppColors.text,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  optionText: {
-    fontSize: 14,
-    color: AppColors.text,
-  },
-  linkText: {
-    fontSize: 14,
-    color: AppColors.primary,
   },
   loginButton: {
     backgroundColor: AppColors.primary,

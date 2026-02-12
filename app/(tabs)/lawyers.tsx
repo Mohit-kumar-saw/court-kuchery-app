@@ -7,10 +7,11 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const LAWYERS = [
   {
@@ -55,7 +56,6 @@ const PILLS = [
 
 export default function LawyersScreen() {
   const router = useRouter();
-
   const [activePill, setActivePill] =
     useState<'All' | 'Family' | 'Criminal' | 'Cyber'>('All');
 
@@ -65,142 +65,152 @@ export default function LawyersScreen() {
   }, [activePill]);
 
   return (
-    <View style={styles.container}>
-      {/* Pills Wrapper */}
-      <View style={styles.pillsWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.pillsContainer}
-        >
-          {PILLS.map((pill) => {
-            // Filter icon pill
-            if (pill.type === 'icon') {
-              return (
-                <Pressable
-                  key="filter"
-                  style={styles.filterPill}
-                  onPress={() => console.log('Open filters')}
-                >
-                  <Ionicons
-                    name="options-outline"
-                    size={18}
-                    color="#2F5BEA"
-                  />
-                </Pressable>
-              );
-            }
-
-            const isActive = activePill === pill.key;
-
-            return (
-              <Pressable
-                key={pill.key}
-                onPress={() => setActivePill(pill.key as any)}
-                style={[
-                  styles.pill,
-                  isActive ? styles.pillActive : styles.pillInactive,
-                ]}
+    <SafeAreaView style={styles.safe}>
+      {/* 👇 This wrapper is THE web fix */}
+      <View style={styles.webWrapper}>
+        <FlatList
+          data={filteredLawyers}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View style={styles.pillsWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.pillsContainer}
               >
-                <Text
-                  style={[
-                    styles.pillText,
-                    isActive
-                      ? styles.pillTextActive
-                      : styles.pillTextInactive,
-                  ]}
-                >
-                  {pill.label}
+                {PILLS.map((pill) => {
+                  if (pill.type === 'icon') {
+                    return (
+                      <Pressable
+                        key="filter"
+                        style={styles.filterPill}
+                      >
+                        <Ionicons
+                          name="options-outline"
+                          size={18}
+                          color="#2F5BEA"
+                        />
+                      </Pressable>
+                    );
+                  }
+
+                  const isActive = activePill === pill.key;
+
+                  return (
+                    <Pressable
+                      key={pill.key}
+                      onPress={() => setActivePill(pill.key as any)}
+                      style={[
+                        styles.pill,
+                        isActive
+                          ? styles.pillActive
+                          : styles.pillInactive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          isActive
+                            ? styles.pillTextActive
+                            : styles.pillTextInactive,
+                        ]}
+                      >
+                        {pill.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => router.push(`/lawyers/${item.id}`)}
+              style={({ pressed, hovered }) => [
+                styles.card,
+                pressed && { opacity: 0.9 },
+                hovered &&
+                  Platform.OS === 'web' && {
+                    transform: [{ scale: 1.01 }],
+                  },
+              ]}
+            >
+              {/* Avatar */}
+              <Image source={item.image} style={styles.avatar} />
+
+              {/* Info */}
+              <View style={styles.info}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.specialty}>{item.specialty}</Text>
+                <Text style={styles.experience}>
+                  Exp – {item.experience}
                 </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
 
-      {/* Lawyers List */}
-      <FlatList
-      
-        data={filteredLawyers}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable
-          onPress={() => router.push(`/lawyers/${item.id}`)}
-          style={({ pressed }) => [
-            styles.card,
-            pressed && { opacity: 0.9 },
-          ]}
-        >
-            {/* Left */}
-            <Image source={item.image} style={styles.avatar} />
-
-            {/* Center */}
-            <View style={styles.info}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.specialty}>{item.specialty}</Text>
-              <Text style={styles.experience}>
-                Exp - {item.experience}
-              </Text>
-
-              <View style={styles.ratingRow}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < item.rating ? 'star' : 'star-outline'}
-                    size={14}
-                    color="#F4B400"
-                  />
-                ))}
-              </View>
-            </View>
-
-            {/* Right */}
-            <View style={styles.right}>
-              <Text style={styles.rate}>{item.rate}</Text>
-
-              <View style={styles.actions}>
-                <View style={styles.iconBtn}>
-                  <Ionicons name="call" size={18} color="#2F5BEA" />
-                </View>
-                <View style={styles.iconBtn}>
-                  <Ionicons
-                    name="chatbubble-ellipses"
-                    size={18}
-                    color="#2F5BEA"
-                  />
+                <View style={styles.ratingRow}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Ionicons
+                      key={i}
+                      name={i < item.rating ? 'star' : 'star-outline'}
+                      size={14}
+                      color="#F4B400"
+                    />
+                  ))}
                 </View>
               </View>
-            </View>
+
+              {/* Right */}
+              <View style={styles.right}>
+                <Text style={styles.rate}>{item.rate}</Text>
+
+                <View style={styles.actions}>
+                  <View style={styles.iconBtn}>
+                    <Ionicons name="call" size={18} color="#2F5BEA" />
+                  </View>
+                  <View style={styles.iconBtn}>
+                    <Ionicons
+                      name="chatbubble-ellipses"
+                      size={18}
+                      color="#2F5BEA"
+                    />
+                  </View>
+                </View>
+              </View>
             </Pressable>
-                    )}
-      />
-    </View>
+          )}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
-
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
     backgroundColor: '#F3F7FF',
   },
 
-  /* Pills */
-  pillsWrapper: {
-    backgroundColor: '#F3F7FF',
-    paddingBottom: 6,
+  /* 🔥 WEB FIX */
+  webWrapper: {
+    flex: 1,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 420 : '100%',
   },
 
+  /* Pills */
+  pillsWrapper: {
+    paddingBottom: 8,
+  },
   pillsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     gap: 10,
     alignItems: 'center',
   },
-
   filterPill: {
     width: 44,
     height: 36,
@@ -211,7 +221,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   pill: {
     height: 36,
     paddingHorizontal: 14,
@@ -219,27 +228,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
   },
-
   pillActive: {
     backgroundColor: '#2F5BEA',
     borderColor: '#2F5BEA',
   },
-
   pillInactive: {
     backgroundColor: '#FFFFFF',
     borderColor: '#2F5BEA',
   },
-
   pillText: {
     fontSize: 13,
     fontWeight: '600',
-    lineHeight: 18,
   },
-
   pillTextActive: {
     color: '#FFFFFF',
   },
-
   pillTextInactive: {
     color: '#2F5BEA',
   },
@@ -247,24 +250,26 @@ const styles = StyleSheet.create({
   /* List */
   list: {
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingBottom: 24,
     gap: 14,
-    paddingBottom: 20,
   },
 
   card: {
     flexDirection: 'row',
     backgroundColor: '#EAF0FF',
     borderRadius: 16,
-    padding: 14,
+    padding: Platform.OS === 'web' ? 18 : 14,
     alignItems: 'center',
+    overflow: 'hidden',
   },
 
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: Platform.OS === 'web' ? 64 : 56,
+    height:Platform.OS === 'web' ? 64 : 56,
+    aspectRatio: 1,
+    borderRadius: Platform.OS === 'web' ? 32 : 28,
     marginRight: 12,
+    overflow: 'hidden',
   },
 
   info: {
@@ -297,8 +302,6 @@ const styles = StyleSheet.create({
 
   right: {
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: '100%',
   },
 
   rate: {
@@ -310,7 +313,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 12,
+    marginTop: 10,
   },
 
   iconBtn: {
@@ -322,5 +325,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
-

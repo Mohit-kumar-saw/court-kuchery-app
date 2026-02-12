@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
   Image,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -186,8 +187,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-  },
+    paddingHorizontal: 0,
+    paddingTop: Platform.OS === 'web' ? 0: 12  },
   slide1: {
     paddingBottom: 120,
   },

@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.white,
+    paddingTop:25
   },
   scrollContent: {
     flexGrow: 1,

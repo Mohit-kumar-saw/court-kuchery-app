@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View ,Image} from 'react-native';
 
 import { AppColors } from '@/constants/theme';
 
@@ -17,13 +17,7 @@ export default function AboutScreen() {
       </View>
       <View style={styles.content}>
         <View style={styles.logoSection}>
-          <View style={styles.logoOval}>
-            <Ionicons name="scale-outline" size={48} color={AppColors.gold} />
-            <View>
-              <Text style={styles.logoCourt}>COURT</Text>
-              <Text style={styles.logoKutchery}>Kutchery</Text>
-            </View>
-          </View>
+         <Image source={require('@/assets/court/court-k-logo.png')} style={styles.logo}/>
         </View>
         <Text style={styles.version}>Version 1.0.0</Text>
         <Text style={styles.description}>
@@ -67,16 +61,9 @@ const styles = StyleSheet.create({
   logoSection: {
     marginBottom: 24,
   },
-  logoOval: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: AppColors.white,
-    paddingVertical: 20,
-    paddingHorizontal: 32,
-    borderRadius: 80,
-    borderWidth: 2,
-    borderColor: AppColors.primary,
-    gap: 16,
+  logo: {
+    width: 210,
+    height: 74,
   },
   logoCourt: {
     fontSize: 24,

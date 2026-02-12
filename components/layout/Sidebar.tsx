@@ -1,6 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppColors, ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
@@ -10,12 +19,37 @@ type SidebarProps = {
   onClose: () => void;
 };
 
-const MENU_ITEMS: { id: string; label: string; icon: string; route: string }[] = [
-  { id: 'my-cases', label: 'My Cases', icon: 'document-text-outline', route: ROUTES.TABS.MY_CASES },
-  { id: 'chat-history', label: 'Chat History', icon: 'chatbubble-ellipses-outline', route: ROUTES.TABS.CHAT_HISTORY },
-  { id: 'wallet', label: 'Wallet', icon: 'wallet-outline', route: ROUTES.TABS.WALLET },
-  { id: 'change-password', label: 'Change Password', icon: 'lock-closed-outline', route: ROUTES.TABS.CHANGE_PASSWORD },
-  { id: 'about', label: 'About App', icon: 'information-circle-outline', route: ROUTES.TABS.ABOUT },
+const MENU_ITEMS = [
+  {
+    id: 'my-cases',
+    label: 'My Cases',
+    icon: 'document-text-outline',
+    route: ROUTES.TABS.MY_CASES,
+  },
+  {
+    id: 'chat-history',
+    label: 'Chat History',
+    icon: 'chatbubble-ellipses-outline',
+    route: ROUTES.TABS.CHAT_HISTORY,
+  },
+  {
+    id: 'wallet',
+    label: 'Wallet',
+    icon: 'wallet-outline',
+    route: ROUTES.TABS.WALLET,
+  },
+  {
+    id: 'change-password',
+    label: 'Change Password',
+    icon: 'lock-closed-outline',
+    route: ROUTES.TABS.CHANGE_PASSWORD,
+  },
+  {
+    id: 'about',
+    label: 'About App',
+    icon: 'information-circle-outline',
+    route: ROUTES.TABS.ABOUT,
+  },
 ];
 
 export function Sidebar({ visible, onClose }: SidebarProps) {
@@ -33,55 +67,27 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
     router.replace(ROUTES.AUTH.LOGIN);
   };
 
-  // NOTE: `Modal` on web uses portals and can occasionally throw DOM `removeChild` errors
-  // during rapid mount/unmount. For web, render an in-tree overlay instead.
+  /* ---------------- WEB (no Modal issues) ---------------- */
   if (Platform.OS === 'web') {
     if (!visible) return null;
-    return (
-      <View style={styles.webOverlay} pointerEvents="box-none">
-        <Pressable style={styles.webBackdrop} onPress={onClose} />
-        <View style={styles.panel}>
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.userAvatarText}>{user?.name?.charAt(0) ?? 'U'}</Text>
-              </View>
-              <Text style={styles.userName}>{user?.name ?? 'User'}</Text>
-            </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={28} color={AppColors.primary} />
-            </TouchableOpacity>
-          </View >
 
-          {/* line */}
-          <View style={styles.line} >
-          </View>
-          <View style={styles.menu}>
-            {MENU_ITEMS.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.menuItem}
-                onPress={() => handleNavigate(item.route)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={item.icon as any} size={22} color={AppColors.primary} />
-                <Text style={styles.menuLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.menuItem, styles.logoutItem]}
-              onPress={handleLogout}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={22} color={AppColors.primary} />
-              <Text style={styles.menuLabel}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    return (
+      <View style={styles.webOverlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+
+        <SafeAreaView style={styles.panel}>
+          <Header user={user} onClose={onClose} />
+          <Divider />
+          <Menu
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        </SafeAreaView>
       </View>
     );
   }
 
+  /* ---------------- MOBILE ---------------- */
   return (
     <Modal
       visible={visible}
@@ -89,91 +95,119 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
       animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <View style={styles.panel}>
-          <TouchableOpacity onPress={onClose} style={styles.closeArea} />
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.userAvatarText}>{user?.name?.charAt(0) ?? 'U'}</Text>
-              </View>
-              <Text style={styles.userName}>{user?.name ?? 'User'}</Text>
-            </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={28} color={AppColors.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.menu}>
-            {MENU_ITEMS.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.menuItem}
-                onPress={() => handleNavigate(item.route)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={item.icon as any} size={22} color={AppColors.primary} />
-                <Text style={styles.menuLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.menuItem, styles.logoutItem]}
-              onPress={handleLogout}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="log-out-outline" size={22} color={AppColors.primary} />
-              <Text style={styles.menuLabel}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <SafeAreaView style={styles.panel}>
+          <Header user={user} onClose={onClose} />
+          <Divider />
+          <Menu
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        </SafeAreaView>
+      </Pressable>
     </Modal>
   );
 }
 
+/* ================= SUB COMPONENTS ================= */
+
+function Header({ user, onClose }: any) {
+  return (
+    <View style={styles.headerRow}>
+      <View style={styles.userInfo}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {user?.name?.charAt(0) ?? 'U'}
+          </Text>
+        </View>
+        <Text style={styles.userName}>{user?.name ?? 'User'}</Text>
+      </View>
+
+      <TouchableOpacity onPress={onClose}>
+        <Ionicons name="close" size={26} color={AppColors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function Menu({ onNavigate, onLogout }: any) {
+  return (
+    <View style={styles.menu}>
+      {MENU_ITEMS.map((item: any) => (
+        <TouchableOpacity
+          key={item.id}
+          style={styles.menuItem}
+          onPress={() => onNavigate(item.route)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={item.icon}
+            size={22}
+            color={AppColors.primary}
+          />
+          <Text style={styles.menuLabel}>{item.label}</Text>
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity
+        style={[styles.menuItem, styles.logoutItem]}
+        onPress={onLogout}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name="log-out-outline"
+          size={22}
+          color={AppColors.primary}
+        />
+        <Text style={styles.menuLabel}>Log Out</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function Divider() {
+  return <View style={styles.divider} />;
+}
+
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
+  /* Overlay */
+  overlay: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
   webOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
   },
-  webBackdrop: {
+  backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#ebf2ff',
   },
-  overlay: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    backgroundColor: '#ebf2ff',
-  },
-  closeArea: {
-    flex: 1,
-  },
+
+  /* Sidebar panel */
   panel: {
-    width: '100%',
-    backgroundColor: "#ebf2ff",
-    paddingTop: 10,
+    flex: 1,
+    backgroundColor: '#ebf2ff',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
-  line:{
-    height:0.2,
-    backgroundColor:"#184eb2",
-    marginBottom:20,
-  },
-  content: {
+
+  /* Header */
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  header: {
+  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  userAvatar: {
+  avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -181,7 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  userAvatarText: {
+  avatarText: {
     fontSize: 20,
     fontWeight: '600',
     color: AppColors.primary,
@@ -191,25 +225,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.text,
   },
-  closeButton: {
-    padding: 4,
+
+  /* Divider */
+  divider: {
+    height: 1,
+    backgroundColor: '#184eb2',
+    marginBottom: 20,
   },
+
+  /* Menu */
   menu: {
-    gap: 4,
+    gap: 14,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingVertical: 12,
   },
   menuLabel: {
     fontSize: 16,
-    color: AppColors.primary,
     fontWeight: '500',
+    color: AppColors.primary,
   },
   logoutItem: {
-    marginTop: 16,
+    marginTop: 20,
   },
 });

@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: "#cadcff",
+    paddingTop:40,
   },
   iconButton: {
     padding: 4,
@@ -56,6 +57,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginLeft:30
   },
   logo: {
     width: 100,
