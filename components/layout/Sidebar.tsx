@@ -13,11 +13,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppColors, ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
+import { api } from '@/services/api';
+import { tokenStorage } from '@/services/tokenStorage';
 
 type SidebarProps = {
   visible: boolean;
   onClose: () => void;
 };
+
+async function logoutBackend() {
+  try {
+    await api.post('/auth/logout');
+  } catch (err) {
+    console.log("logout not possible....",err);
+    
+  }
+
+  await tokenStorage.clear();
+}
 
 const MENU_ITEMS = [
   {
@@ -52,6 +65,8 @@ const MENU_ITEMS = [
   },
 ];
 
+
+
 export function Sidebar({ visible, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -64,6 +79,7 @@ export function Sidebar({ visible, onClose }: SidebarProps) {
   const handleLogout = () => {
     onClose();
     logout();
+    logoutBackend();
     router.replace(ROUTES.AUTH.LOGIN);
   };
 

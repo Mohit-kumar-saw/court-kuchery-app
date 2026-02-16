@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 import {
   FlatList,
   Image,
@@ -8,179 +8,368 @@ import {
   Text,
   View,
   Platform,
-} from 'react-native';
-import { useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  TextInput,
+  ActivityIndicator,
+} from "react-native";
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const LAWYERS = [
-  {
-    id: '1',
-    name: 'Rakesh Singh',
-    specialty: 'Criminal Lawyer',
-    experience: '10 Years',
-    rate: '₹10/min',
-    rating: 4,
-    image: require('@/assets/court/lawyer1.jpeg'),
-    category: 'Criminal',
-  },
-  {
-    id: '2',
-    name: 'Amrita Ghosh',
-    specialty: 'Family Lawyer',
-    experience: '5 Years',
-    rate: '₹08/min',
-    rating: 4,
-    image: require('@/assets/court/lawyer2.jpeg'),
-    category: 'Family',
-  },
-  {
-    id: '3',
-    name: 'Sharika Chauhan',
-    specialty: 'Cyber Lawyer',
-    experience: '7 Years',
-    rate: '₹15/min',
-    rating: 4,
-    image: require('@/assets/court/lawyer3.jpeg'),
-    category: 'Cyber',
-  },
-];
+import { lawyerService } from "@/services/lawyerService";
 
-const PILLS = [
-  { key: 'filter', type: 'icon' },
-  { key: 'All', label: 'All Lawyer' },
-  { key: 'Family', label: 'Family Lawyer' },
-  { key: 'Criminal', label: 'Criminal Lawyer' },
-  { key: 'Cyber', label: 'Cyber Lawyer' },
-];
+type Lawyer = {
+  _id: string;
+  name: string;
+  specialization: string;
+  experienceYears: number;
+  ratePerMinute: number;
+  rating: number;
+  isOnline: boolean;
+  profileImage?: string;
+};
 
 export default function LawyersScreen() {
   const router = useRouter();
-  const [activePill, setActivePill] =
-    useState<'All' | 'Family' | 'Criminal' | 'Cyber'>('All');
 
-  const filteredLawyers = useMemo(() => {
-    if (activePill === 'All') return LAWYERS;
-    return LAWYERS.filter((l) => l.category === activePill);
+  const [lawyers, setLawyers] = useState<Lawyer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [activePill, setActivePill] =
+    useState<"All" | "Family" | "Criminal" | "Cyber">("All");
+
+  const [showFilter, setShowFilter] = useState(false);
+
+  const [filters, setFilters] = useState({
+    minPrice: "",
+    maxPrice: "",
+    onlineOnly: false,
+    sort: "rating",
+  });
+
+  /* ================= FETCH LAWYERS ================= */
+
+  const fetchLawyers = async () => {
+    try {
+      setLoading(true);
+
+      const response = await lawyerService.getLawyers({
+        specialization:
+          activePill === "All" ? undefined : activePill,
+        sort: filters.sort,
+        minPrice: filters.minPrice
+          ? Number(filters.minPrice)
+          : undefined,
+        maxPrice: filters.maxPrice
+          ? Number(filters.maxPrice)
+          : undefined,
+        onlineOnly: filters.onlineOnly,
+        page: 1,
+        limit: 20,
+      });
+
+      setLawyers(response.lawyers);
+    } catch (error) {
+      console.log("FETCH LAWYERS ERROR", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLawyers();
   }, [activePill]);
+
+  /* ================= RENDER ================= */
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* 👇 This wrapper is THE web fix */}
       <View style={styles.webWrapper}>
-        <FlatList
-          data={filteredLawyers}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-          ListHeaderComponent={
-            <View style={styles.pillsWrapper}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.pillsContainer}
-              >
-                {PILLS.map((pill) => {
-                  if (pill.type === 'icon') {
-                    return (
-                      <Pressable
-                        key="filter"
-                        style={styles.filterPill}
-                      >
-                        <Ionicons
-                          name="options-outline"
-                          size={18}
-                          color="#2F5BEA"
-                        />
-                      </Pressable>
-                    );
-                  }
-
-                  const isActive = activePill === pill.key;
-
-                  return (
-                    <Pressable
-                      key={pill.key}
-                      onPress={() => setActivePill(pill.key as any)}
-                      style={[
-                        styles.pill,
-                        isActive
-                          ? styles.pillActive
-                          : styles.pillInactive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.pillText,
-                          isActive
-                            ? styles.pillTextActive
-                            : styles.pillTextInactive,
-                        ]}
-                      >
-                        {pill.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/lawyers/${item.id}`)}
-              style={({ pressed, hovered }) => [
-                styles.card,
-                pressed && { opacity: 0.9 },
-                hovered &&
-                  Platform.OS === 'web' && {
-                    transform: [{ scale: 1.01 }],
-                  },
-              ]}
-            >
-              {/* Avatar */}
-              <Image source={item.image} style={styles.avatar} />
-
-              {/* Info */}
-              <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.specialty}>{item.specialty}</Text>
-                <Text style={styles.experience}>
-                  Exp – {item.experience}
-                </Text>
-
-                <View style={styles.ratingRow}>
-                  {Array.from({ length: 5 }).map((_, i) => (
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#2F5BEA"
+            style={{ marginTop: 40 }}
+          />
+        ) : (
+          <FlatList
+            data={lawyers}
+            keyExtractor={(item) => item._id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <View style={styles.pillsWrapper}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.pillsContainer}
+                >
+                  {/* FILTER ICON */}
+                  <Pressable
+                    style={styles.filterPill}
+                    onPress={() => setShowFilter(true)}
+                  >
                     <Ionicons
-                      key={i}
-                      name={i < item.rating ? 'star' : 'star-outline'}
-                      size={14}
-                      color="#F4B400"
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Right */}
-              <View style={styles.right}>
-                <Text style={styles.rate}>{item.rate}</Text>
-
-                <View style={styles.actions}>
-                  <View style={styles.iconBtn}>
-                    <Ionicons name="call" size={18} color="#2F5BEA" />
-                  </View>
-                  <View style={styles.iconBtn}>
-                    <Ionicons
-                      name="chatbubble-ellipses"
+                      name="options-outline"
                       size={18}
                       color="#2F5BEA"
                     />
+                  </Pressable>
+
+                  {["All", "Family", "Criminal", "Cyber"].map(
+                    (pill) => {
+                      const isActive =
+                        activePill === pill;
+
+                      return (
+                        <Pressable
+                          key={pill}
+                          onPress={() =>
+                            setActivePill(
+                              pill as any
+                            )
+                          }
+                          style={[
+                            styles.pill,
+                            isActive
+                              ? styles.pillActive
+                              : styles.pillInactive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.pillText,
+                              isActive
+                                ? styles.pillTextActive
+                                : styles.pillTextInactive,
+                            ]}
+                          >
+                            {pill} Lawyer
+                          </Text>
+                        </Pressable>
+                      );
+                    }
+                  )}
+                </ScrollView>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/lawyers/${item._id}`
+                  )
+                }
+                style={styles.card}
+              >
+                {/* Avatar */}
+                {item.profileImage ? (
+                  <Image
+                    source={{
+                      uri: item.profileImage,
+                    }}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarText}>
+                      {item.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Info */}
+                <View style={styles.info}>
+                  <Text style={styles.name}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.specialty}>
+                    {item.specialization} Lawyer
+                  </Text>
+                  <Text style={styles.experience}>
+                    Exp –{" "}
+                    {item.experienceYears} Years
+                  </Text>
+
+                  <View style={styles.ratingRow}>
+                    {Array.from({
+                      length: 5,
+                    }).map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name={
+                          i < item.rating
+                            ? "star"
+                            : "star-outline"
+                        }
+                        size={14}
+                        color="#F4B400"
+                      />
+                    ))}
                   </View>
                 </View>
-              </View>
-            </Pressable>
-          )}
-        />
+
+                {/* Right */}
+                <View style={styles.right}>
+                  <Text style={styles.rate}>
+                    ₹{item.ratePerMinute}/min
+                  </Text>
+
+                  {item.isOnline && (
+                    <Text style={styles.online}>
+                      ● Online
+                    </Text>
+                  )}
+                </View>
+              </Pressable>
+            )}
+          />
+        )}
       </View>
+
+      {/* ================= ADVANCED FILTER ================= */}
+
+      {showFilter && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>
+              Advanced Filter
+            </Text>
+
+            <Text style={styles.label}>
+              Min Price
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={filters.minPrice}
+              onChangeText={(text) =>
+                setFilters({
+                  ...filters,
+                  minPrice: text,
+                })
+              }
+              placeholder="₹ 0"
+            />
+
+            <Text style={styles.label}>
+              Max Price
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={filters.maxPrice}
+              onChangeText={(text) =>
+                setFilters({
+                  ...filters,
+                  maxPrice: text,
+                })
+              }
+              placeholder="₹ 50"
+            />
+
+            <Pressable
+              style={styles.checkboxRow}
+              onPress={() =>
+                setFilters({
+                  ...filters,
+                  onlineOnly:
+                    !filters.onlineOnly,
+                })
+              }
+            >
+              <Ionicons
+                name={
+                  filters.onlineOnly
+                    ? "checkbox"
+                    : "square-outline"
+                }
+                size={22}
+                color="#2F5BEA"
+              />
+              <Text>
+                Online Only
+              </Text>
+            </Pressable>
+
+            <Text style={styles.label}>
+              Sort By
+            </Text>
+
+            {[
+              {
+                label: "Rating",
+                value: "rating",
+              },
+              {
+                label: "Low Price",
+                value: "price_low",
+              },
+              {
+                label: "High Price",
+                value: "price_high",
+              },
+              {
+                label: "Experience",
+                value: "experience",
+              },
+            ].map((item) => (
+              <Pressable
+                key={item.value}
+                style={styles.sortRow}
+                onPress={() =>
+                  setFilters({
+                    ...filters,
+                    sort: item.value,
+                  })
+                }
+              >
+                <Text>
+                  {item.label}
+                </Text>
+                {filters.sort ===
+                  item.value && (
+                  <Ionicons
+                    name="checkmark"
+                    size={18}
+                    color="#2F5BEA"
+                  />
+                )}
+              </Pressable>
+            ))}
+
+            <View
+              style={styles.modalButtons}
+            >
+              <Pressable
+                onPress={() =>
+                  setShowFilter(false)
+                }
+              >
+                <Text>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.applyBtn}
+                onPress={() => {
+                  setShowFilter(false);
+                  fetchLawyers();
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#fff",
+                  }}
+                >
+                  Apply
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -190,64 +379,72 @@ export default function LawyersScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F3F7FF',
+    backgroundColor: "#F3F7FF",
   },
 
-  /* 🔥 WEB FIX */
   webWrapper: {
     flex: 1,
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: Platform.OS === 'web' ? 420 : '100%',
+    alignSelf: "center",
+    width: "100%",
+    maxWidth:
+      Platform.OS === "web"
+        ? 420
+        : "100%",
   },
 
-  /* Pills */
   pillsWrapper: {
     paddingBottom: 8,
   },
+
   pillsContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
+
   filterPill: {
     width: 44,
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#2F5BEA',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#2F5BEA",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
+
   pill: {
     height: 36,
     paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1.5,
-    justifyContent: 'center',
-  },
-  pillActive: {
-    backgroundColor: '#2F5BEA',
-    borderColor: '#2F5BEA',
-  },
-  pillInactive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#2F5BEA',
-  },
-  pillText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  pillTextActive: {
-    color: '#FFFFFF',
-  },
-  pillTextInactive: {
-    color: '#2F5BEA',
+    justifyContent: "center",
   },
 
-  /* List */
+  pillActive: {
+    backgroundColor: "#2F5BEA",
+    borderColor: "#2F5BEA",
+  },
+
+  pillInactive: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#2F5BEA",
+  },
+
+  pillText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  pillTextActive: {
+    color: "#FFFFFF",
+  },
+
+  pillTextInactive: {
+    color: "#2F5BEA",
+  },
+
   list: {
     paddingHorizontal: 16,
     paddingBottom: 24,
@@ -255,73 +452,134 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    flexDirection: 'row',
-    backgroundColor: '#EAF0FF',
+    flexDirection: "row",
+    backgroundColor: "#EAF0FF",
     borderRadius: 16,
-    padding: Platform.OS === 'web' ? 18 : 14,
-    alignItems: 'center',
-    overflow: 'hidden',
+    padding: 14,
+    alignItems: "center",
   },
 
   avatar: {
-    width: Platform.OS === 'web' ? 64 : 56,
-    height:Platform.OS === 'web' ? 64 : 56,
-    aspectRatio: 1,
-    borderRadius: Platform.OS === 'web' ? 32 : 28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     marginRight: 12,
-    overflow: 'hidden',
   },
 
-  info: {
-    flex: 1,
+  avatarFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#2F5BEA",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
+
+  avatarText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  info: { flex: 1 },
 
   name: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: "600",
   },
 
   specialty: {
     fontSize: 14,
-    color: '#2563EB',
+    color: "#2563EB",
     marginTop: 2,
   },
 
   experience: {
     fontSize: 13,
-    color: '#64748B',
+    color: "#64748B",
     marginTop: 2,
   },
 
   ratingRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: 6,
     gap: 2,
   },
 
   right: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
 
   rate: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2563EB',
+    fontWeight: "600",
+    color: "#2563EB",
   },
 
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
+  online: {
+    marginTop: 4,
+    color: "green",
+    fontSize: 12,
   },
 
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#E0E9FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor:
+      "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    padding: 20,
+  },
+
+  modal: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+
+  label: { marginTop: 10 },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 4,
+  },
+
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  sortRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
+
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+
+  applyBtn: {
+    backgroundColor: "#2F5BEA",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
 });

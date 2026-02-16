@@ -5,18 +5,18 @@
 export type User = {
   id: string;
   name: string;
-  phone: string;
   email: string;
+  phone?: string;
 };
 
 export type LoginCredentials = {
-  phone: string;
+  email: string;
   password: string;
 };
 
 export type SignUpCredentials = {
   name: string;
-  phone: string;
+  phone?: string;
   email: string;
   password: string;
 };

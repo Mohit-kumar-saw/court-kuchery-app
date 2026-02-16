@@ -1,16 +1,23 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-import { authService } from '@/services';
-import type { User } from '@/types';
+import { authService } from "@/services/auth.service";
+import { tokenStorage } from "@/services/tokenStorage";
+import type { User } from "@/types";
 
 type AuthContextType = {
   hasCompletedSplash: boolean;
   completeSplash: () => void;
   user: User | null;
   isLoggedIn: boolean;
-  login: (phone: string, password: string) => Promise<void>;
-  signUp: (name: string, phone: string, email: string, password?: string) => Promise<void>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, phone:string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -19,29 +26,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [hasCompletedSplash, setHasCompletedSplash] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  const completeSplash = useCallback(() => setHasCompletedSplash(true), []);
   const isLoggedIn = !!user;
 
-  const login = useCallback(async (phone: string, password: string) => {
-    const loggedInUser = await authService.login({ phone, password });
-    setUser(loggedInUser);
+  /* =============================
+     RESTORE SESSION
+  ============================== */
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = await tokenStorage.getAccessToken();
+
+      if (token) {
+        // OPTIONAL:
+        // Later create GET /auth/me to fetch user
+        // For now just assume logged in
+      }
+    };
+
+    restoreSession();
   }, []);
 
+  /* =============================
+     SPLASH
+  ============================== */
+  const completeSplash = useCallback(() => {
+    setHasCompletedSplash(true);
+  }, []);
+
+  /* =============================
+     LOGIN
+  ============================== */
+  const login = useCallback(async (email: string, password: string) => {
+    const user = await authService.login({ email, password });
+
+    setUser(user);
+  }, []);
+
+  /* =============================
+     SIGN UP
+  ============================== */
   const signUp = useCallback(
-    async (name: string, phone: string, email: string, password?: string) => {
-      const newUser = await authService.signUp({
+    async (name: string, email: string, password: string) => {
+      const user = await authService.signUp({
         name,
-        phone,
         email,
-        password: password ?? '',
+        password,
       });
-      setUser(newUser);
+
+      setUser(user);
     },
     []
   );
 
-  const logout = useCallback(() => {
-    authService.logout();
+  /* =============================
+     LOGOUT
+  ============================== */
+  const logout = useCallback(async () => {
+    await authService.logout();
     setUser(null);
   }, []);
 
@@ -62,8 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* =============================
+   HOOK
+============================= */
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }

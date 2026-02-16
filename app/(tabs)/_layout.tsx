@@ -89,6 +89,8 @@ export default function TabLayout() {
         <Tabs.Screen name="change-password" options={{ href: null }} />
         <Tabs.Screen name="about" options={{ href: null }} />
         <Tabs.Screen name="lawyers/[id]" options={{ href: null }} />
+        <Tabs.Screen name="lawyers/[id]/chat" options={{ href: null }} />
+        <Tabs.Screen name="lawyers/[id]/call" options={{ href: null }} />
       </Tabs>
 
       {/* 🔹 Global Sidebar */}

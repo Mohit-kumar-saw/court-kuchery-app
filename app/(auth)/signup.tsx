@@ -1,187 +1,155 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    Image,
-} from 'react-native';
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from "react-native";
 
-import { AppColors, ROUTES } from '@/constants';
-import { useAuth } from '@/contexts';
+import { useAuth } from "@/contexts/AuthContext";
+import { AppColors } from "@/constants";
 
-export default function SignUpScreen() {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp } = useAuth();
+export default function SignupScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
 
-  const handleSubmit = async () => {
-    await signUp(name || 'User', phone || '9876543210', email || 'user@example.com', password);
-    router.replace(ROUTES.TABS.ROOT);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSignup = async () => {
+    try {
+      setError("");
+      setLoading(true);
+
+      if (!name || !email || !password) {
+        setError("All fields are required");
+        return;
+      }
+
+      await signUp(name, phone, email, password);
+
+      // After signup go to home
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={AppColors.primary} />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Create Account</Text>
 
-        <View style={styles.logoContainer}>
-          <Image source={require('@/assets/court/court-k-logo.png')} style={styles.logo} />
-        </View>
-
-        <Text style={styles.title}>Sign Up</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <View style={styles.inputContainer}>
-          <Ionicons name="person-outline" size={20} color={AppColors.primaryLight} />
+          <Ionicons name="person-outline" size={20} color="#2563EB" />
           <TextInput
             style={styles.input}
-            placeholder="Name"
-            placeholderTextColor={AppColors.textSecondary}
+            placeholder="Full Name"
             value={name}
             onChangeText={setName}
           />
         </View>
+
         <View style={styles.inputContainer}>
-          <Ionicons name="call-outline" size={20} color={AppColors.primaryLight} />
+          <Ionicons name="mail-outline" size={20} color="#2563EB" />
           <TextInput
             style={styles.input}
-            placeholder="Phone No."
-            placeholderTextColor={AppColors.textSecondary}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color={AppColors.primaryLight} />
-          <TextInput
-            style={styles.input}
-            placeholder="Email Id"
-            placeholderTextColor={AppColors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
+            placeholder="Email"
             keyboardType="email-address"
             autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
         </View>
+        
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color={AppColors.primaryLight} />
+          <Ionicons name="call-outline" size={20} color="#2563EB" />
           <TextInput
             style={styles.input}
-            placeholder="Create Password"
-            placeholderTextColor={AppColors.textSecondary}
+            placeholder="Phone Number"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
+          />
+        </View>
+
+
+        <View style={styles.inputContainer}>
+          <Ionicons name="lock-closed-outline" size={20} color="#2563EB" />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            secureTextEntry
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={!showPassword}
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={22}
-              color={AppColors.textSecondary}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color={AppColors.primaryLight} />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor={AppColors.textSecondary}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirmPassword}
-          />
-          <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-            <Ionicons
-              name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={22}
-              color={AppColors.textSecondary}
-            />
-          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
-          <Text style={styles.submitButtonText}>Submit</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSignup}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
 
-        <View style={styles.signinRow}>
-          <Text style={styles.signinPrompt}>Already have account</Text>
-          <Link href={ROUTES.AUTH.LOGIN} asChild>
-            <TouchableOpacity>
-              <Text style={styles.signinLink}>Sign In</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
+        <TouchableOpacity onPress={() => router.push("/login")}>
+          <Text style={styles.link}>Already have an account? Login</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.white,
-    paddingTop:25
+    backgroundColor: "#fff",
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
-
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  backText: {
-    fontSize: 16,
-    color: AppColors.primary,
-    marginLeft: 4,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logo: {
-    width: 210,
-    height: 74,
+  content: {
+    padding: 24,
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: AppColors.text,
-    marginBottom: 24,
+    fontWeight: "700",
+    marginBottom: 30,
+  },
+  error: {
+    color: "red",
+    marginBottom: 10,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: AppColors.primaryLight,
+    borderColor: "#2563EB",
     borderRadius: 12,
     paddingHorizontal: 16,
     marginBottom: 16,
@@ -190,35 +158,22 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingVertical: 14,
-    fontSize: 16,
-    color: AppColors.text,
   },
-  submitButton: {
-    backgroundColor: AppColors.primary,
+  button: {
+    backgroundColor: "#2563EB",
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 24,
+    alignItems: "center",
+    marginTop: 10,
   },
-  submitButtonText: {
-    color: AppColors.white,
-    fontSize: 18,
-    fontWeight: '600',
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
-  signinRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-  },
-  signinPrompt: {
-    fontSize: 15,
-    color: AppColors.textSecondary,
-  },
-  signinLink: {
-    fontSize: 15,
-    color: AppColors.primary,
-    fontWeight: '600',
+  link: {
+    marginTop: 20,
+    textAlign: "center",
+    color: "#2563EB",
   },
 });
