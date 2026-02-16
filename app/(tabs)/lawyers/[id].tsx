@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { lawyerService } from "@/services/lawyerService";
 import { walletService } from "@/services/walletService";
 import { consultService } from "@/services/consultService";
+import { reviewService } from "@/services/reviewService";
 
 type Lawyer = {
   _id: string;
@@ -39,6 +40,7 @@ export default function LawyerDetailsScreen() {
 
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [checkingBalance, setCheckingBalance] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
 
   const MIN_BALANCE = 50;
 
@@ -48,6 +50,10 @@ export default function LawyerDetailsScreen() {
         if (!id) return;
         const res = await lawyerService.getLawyerById(id);
         setLawyer(res.lawyer);
+
+        // Fetch Reviews
+        const reviewRes = await reviewService.getLawyerReviews(id);
+        setReviews(reviewRes.reviews || []);
       } catch (error) {
         console.log("DETAIL ERROR", error);
       } finally {
@@ -158,6 +164,51 @@ export default function LawyerDetailsScreen() {
           {lawyer.bio}...
           <Text style={{ color: "#2563EB" }}> More</Text>
         </Text>
+
+        {/* REVIEWS SECTION */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Reviews & Ratings</Text>
+          <TouchableOpacity>
+            <Text style={styles.viewAll}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {reviews.length === 0 ? (
+          <Text style={styles.noReviews}>No reviews yet.</Text>
+        ) : (
+          reviews.map((review: any) => (
+            <View key={review._id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                {review.userId?.profileImage ? (
+                  <Image source={{ uri: review.userId.profileImage }} style={styles.reviewAvatar} />
+                ) : (
+                  <View style={styles.reviewAvatarFallback}>
+                    <Text style={styles.reviewAvatarText}>
+                      {review.userId?.name?.charAt(0) || "U"}
+                    </Text>
+                  </View>
+                )}
+                <View>
+                  <Text style={styles.reviewName}>{review.userId?.name || "User"}</Text>
+                  <View style={styles.reviewStars}>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Ionicons
+                        key={i}
+                        name={i < review.rating ? "star" : "star-outline"}
+                        size={14}
+                        color="#F4B400"
+                      />
+                    ))}
+                  </View>
+                </View>
+                <TouchableOpacity style={{ marginLeft: 'auto' }}>
+                  <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.reviewText}>{review.comment}</Text>
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* BOTTOM BAR */}
@@ -231,7 +282,7 @@ export default function LawyerDetailsScreen() {
                   } catch (error: any) {
                     alert(
                       error?.response?.data?.message ||
-                        "Unable to start consultation"
+                      "Unable to start consultation"
                     );
                   }
                 }}
@@ -365,4 +416,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+
+  /* REVIEW STYLES */
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1E3A8A' },
+  viewAll: { color: '#2563EB', fontWeight: '600' },
+
+  noReviews: { paddingHorizontal: 16, color: '#64748B', fontStyle: 'italic', marginBottom: 20 },
+
+  reviewCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  reviewHeader: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  reviewAvatar: { width: 40, height: 40, borderRadius: 20 },
+  reviewAvatarFallback: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center'
+  },
+  reviewAvatarText: { fontSize: 16, fontWeight: '600', color: '#64748B' },
+  reviewName: { fontWeight: '700', fontSize: 15, marginBottom: 2 },
+  reviewStars: { flexDirection: 'row', gap: 2 },
+  reviewText: { color: '#334155', lineHeight: 20 },
 });

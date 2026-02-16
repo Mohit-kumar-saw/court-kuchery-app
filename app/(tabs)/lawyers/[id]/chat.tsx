@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { lawyerService } from "@/services/lawyerService";
 import { consultService } from "@/services/consultService";
 import { initializeSocket, getSocket } from "@/services/socket";
+import { reviewService } from "@/services/reviewService";
 import { AppColors } from "@/constants/theme";
 
 type Lawyer = {
@@ -58,6 +59,11 @@ export default function ChatScreen() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
     sessionId ?? null
   );
+
+  /* ================= REVIEW SUBMISSION STATE ================= */
+  const [rating, setRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   /* ================= FETCH LAWYER ================= */
 
@@ -239,8 +245,33 @@ export default function ChatScreen() {
 
   /* ================= UI (UNCHANGED) ================= */
 
+  /* ================= REVIEW SUBMISSION ================= */
+
+  const handleSubmitReview = async () => {
+    if (rating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      await reviewService.createReview(sessionId!, rating, reviewComment);
+      alert("Review submitted successfully!");
+      setSummaryVisible(false);
+      router.back();
+    } catch (error: any) {
+      console.log("REVIEW ERROR", error);
+      alert(error?.response?.data?.message || "Failed to submit review");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  /* ================= UI (UNCHANGED) ================= */
+
   return (
     <View style={styles.container}>
+      {/* ... Header & Chat List (UNCHANGED) ... */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Pressable onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -332,20 +363,60 @@ export default function ChatScreen() {
           <View style={styles.summaryModal}>
             <Text style={styles.summaryTitle}>Consultation Summary</Text>
 
-            <Text>Consult Fee: ₹{summary.totalAmount}</Text>
-            <Text>Remaining Balance: ₹{summary.remainingBalance}</Text>
-            <Text>Platform Commission: ₹{summary.commission}</Text>
-            <Text>Lawyer Earned: ₹{summary.lawyerEarning}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Consult Fee:</Text>
+              <Text style={styles.summaryValue}>₹{summary.totalAmount?.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Duration:</Text>
+              <Text style={styles.summaryValue}>{Math.ceil((summary.durationSeconds || 0) / 60)} mins</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <Text style={styles.rateTitle}>Rate your experience</Text>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable key={star} onPress={() => setRating(star)}>
+                  <Ionicons
+                    name={star <= rating ? "star" : "star-outline"}
+                    size={32}
+                    color="#F4B400"
+                  />
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Write a review (optional)"
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              multiline
+            />
 
             <Pressable
               style={styles.summaryBtn}
+              onPress={handleSubmitReview}
+              disabled={isSubmittingReview}
+            >
+              {isSubmittingReview ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Submit Review</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={styles.skipBtn}
               onPress={() => {
                 setSummaryVisible(false);
                 router.back();
               }}
             >
-              <Text style={{ color: "#fff" }}>Done</Text>
+              <Text style={{ color: "#64748B" }}>Skip</Text>
             </Pressable>
+
           </View>
         </View>
       )}
@@ -478,20 +549,65 @@ const styles = StyleSheet.create({
   summaryModal: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
+    width: "85%",
+    alignSelf: 'center',
   },
 
   summaryTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  summaryLabel: { color: "#64748B", fontSize: 15 },
+  summaryValue: { fontWeight: "600", fontSize: 15 },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 16,
+  },
+
+  rateTitle: {
+    fontSize: 16,
+    fontWeight: "600",
     marginBottom: 12,
+    textAlign: "center",
+  },
+
+  starsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+
+  reviewInput: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 12,
+    height: 80,
+    textAlignVertical: 'top',
+    marginBottom: 16,
   },
 
   summaryBtn: {
-    marginTop: 20,
     backgroundColor: "#2762ea",
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  skipBtn: {
+    marginTop: 12,
+    paddingVertical: 10,
     alignItems: "center",
   },
 });

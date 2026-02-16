@@ -24,6 +24,7 @@ type Lawyer = {
   experienceYears: number;
   ratePerMinute: number;
   rating: number;
+  totalReviews?: number;
   isOnline: boolean;
   profileImage?: string;
 };
@@ -200,7 +201,7 @@ export default function LawyersScreen() {
                       <Ionicons
                         key={i}
                         name={
-                          i < item.rating
+                          i < Math.round(item.rating)
                             ? "star"
                             : "star-outline"
                         }
@@ -208,6 +209,9 @@ export default function LawyersScreen() {
                         color="#F4B400"
                       />
                     ))}
+                    <Text style={styles.reviewCount}>
+                      ({item.totalReviews || 0})
+                    </Text>
                   </View>
                 </View>
 
@@ -331,12 +335,12 @@ export default function LawyersScreen() {
                 </Text>
                 {filters.sort ===
                   item.value && (
-                  <Ionicons
-                    name="checkmark"
-                    size={18}
-                    color="#2F5BEA"
-                  />
-                )}
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color="#2F5BEA"
+                    />
+                  )}
               </Pressable>
             ))}
 
@@ -505,6 +509,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 6,
     gap: 2,
+    alignItems: "center",
+  },
+
+  reviewCount: {
+    fontSize: 12,
+    color: "#64748B",
+    marginLeft: 4,
   },
 
   right: {
