@@ -26,4 +26,9 @@ export const authService = {
   async logout() {
     await tokenStorage.clear();
   },
+
+  async getProfile() {
+    const response = await api.get('/auth/me');
+    return response.data.user;
+  },
 };

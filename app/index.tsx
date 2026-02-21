@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts';
 
 export default function IndexScreen() {
   const router = useRouter();
-  const { hasCompletedSplash, isLoggedIn } = useAuth();
+  const { hasCompletedSplash, isLoggedIn, activeSessionId, activeLawyerId } = useAuth();
 
   useEffect(() => {
     // Defer navigation until after Root Layout's navigator has mounted
@@ -20,10 +20,20 @@ export default function IndexScreen() {
         router.replace(ROUTES.AUTH.LOGIN);
         return;
       }
+
+      if (activeSessionId && activeLawyerId) {
+        // Redirect to chat with session ID
+        router.replace({
+          pathname: `/lawyers/${activeLawyerId}/chat`,
+          params: { sessionId: activeSessionId }
+        } as any);
+        return;
+      }
+
       router.replace(ROUTES.TABS.ROOT);
     }, 0);
     return () => clearTimeout(id);
-  }, [hasCompletedSplash, isLoggedIn, router]);
+  }, [hasCompletedSplash, isLoggedIn, activeSessionId, activeLawyerId, router]);
 
   return (
     <View style={styles.container}>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,10 +9,12 @@ import {
   TouchableOpacity,
   View,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 
 import { AppColors, ROUTES } from '@/constants';
 import { useAuth } from '@/contexts';
+import { lawyerService } from '@/services/lawyerService';
 
 const DUMMY_LAWYERS = [
   { id: '1', name: 'Amar', rate: '₹13/min', avatar: 'A' },
@@ -29,9 +31,33 @@ const DUMMY_CATEGORIES = [
 ];
 
 export default function HomeScreen() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
+
+  const [lawyers, setLawyers] = useState<any[]>([]);
+  const [loadingLawyers, setLoadingLawyers] = useState(true);
+
+  useEffect(() => {
+    const fetchTopLawyers = async () => {
+      try {
+        const res = await lawyerService.getLawyers({ limit: 6 });
+        setLawyers(res.lawyers || []);
+      } catch (err) {
+        console.error("FETCH TOP LAWYERS ERR", err);
+      } finally {
+        setLoadingLawyers(false);
+      }
+    };
+    fetchTopLawyers();
+  }, []);
+
+  const handleCategoryPress = (category: string) => {
+    const pill = category.split(' ')[0]; // Convert "Family Lawyer" to "Family"
+    router.push({
+      pathname: ROUTES.TABS.LAWYERS,
+      params: { category: pill }
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -66,11 +92,19 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.actionCards}>
-          <TouchableOpacity style={styles.actionCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            activeOpacity={0.8}
+            onPress={() => router.push(ROUTES.TABS.LAWYERS)}
+          >
             <Ionicons name="call" size={28} color={AppColors.primary} />
             <Text style={styles.actionCardText}>Call to Lawyers</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCard} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            activeOpacity={0.8}
+            onPress={() => router.push(ROUTES.TABS.LAWYERS)}
+          >
             <Ionicons name="chatbubble-ellipses" size={28} color={AppColors.primary} />
             <Text style={styles.actionCardText}>Chat with Lawyers</Text>
           </TouchableOpacity>
@@ -83,30 +117,45 @@ export default function HomeScreen() {
               <Text style={styles.viewAll}>View All →</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalList}
-          >
-            {DUMMY_LAWYERS.map((lawyer) => (
-              <View key={lawyer.id} style={styles.lawyerCard}>
-                <View style={styles.lawyerAvatar}>
-                  <Text style={styles.lawyerAvatarText}>{lawyer.avatar}</Text>
-                </View>
-                <Text style={styles.lawyerName}>{lawyer.name}</Text>
-                <Text style={styles.lawyerRate}>{lawyer.rate}</Text>
-                <TouchableOpacity style={styles.chatButton} activeOpacity={0.8}>
-                  <Text style={styles.chatButtonText}>Chat</Text>
+          {loadingLawyers ? (
+            <ActivityIndicator color={AppColors.primary} style={{ marginVertical: 20 }} />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {lawyers.map((lawyer) => (
+                <TouchableOpacity
+                  key={lawyer._id}
+                  style={styles.lawyerCard}
+                  onPress={() => router.push(`/lawyers/${lawyer._id}`)}
+                >
+                  <View style={styles.lawyerAvatar}>
+                    <Text style={styles.lawyerAvatarText}>
+                      {lawyer.name?.charAt(0) || 'L'}
+                    </Text>
+                  </View>
+                  <Text style={styles.lawyerName} numberOfLines={1}>{lawyer.name}</Text>
+                  <Text style={styles.lawyerRate}>₹{lawyer.ratePerMinute}/min</Text>
+                  <TouchableOpacity
+                    style={styles.chatButton}
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/lawyers/${lawyer._id}`)}
+                  >
+                    <Text style={styles.chatButtonText}>Chat</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+              {lawyers.length === 0 && <Text style={{ color: AppColors.textSecondary }}>No lawyers available</Text>}
+            </ScrollView>
+          )}
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categories</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push(ROUTES.TABS.LAWYERS)}>
               <Text style={styles.viewAll}>View All →</Text>
             </TouchableOpacity>
           </View>
@@ -116,7 +165,12 @@ export default function HomeScreen() {
             contentContainerStyle={styles.horizontalList}
           >
             {DUMMY_CATEGORIES.map((cat) => (
-              <TouchableOpacity key={cat.id} style={styles.categoryCard} activeOpacity={0.8}>
+              <TouchableOpacity
+                key={cat.id}
+                style={styles.categoryCard}
+                activeOpacity={0.8}
+                onPress={() => handleCategoryPress(cat.title)}
+              >
                 <View style={styles.categoryIconWrap}>
                   <Ionicons name={cat.icon as any} size={32} color={AppColors.primary} />
                 </View>
@@ -149,9 +203,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    padding:20,
-    backgroundColor:'#ebf2ff',
-    borderRadius:20,
+    padding: 20,
+    backgroundColor: '#ebf2ff',
+    borderRadius: 20,
   },
   welcomeText: {
     fontSize: 22,
@@ -166,8 +220,8 @@ const styles = StyleSheet.create({
   logo: {
     width: 80,
     height: 70,
-    borderRadius:100,
-    marginRight:20,
+    borderRadius: 100,
+    marginRight: 20,
   },
   scaleIcon: {
     width: 48,
@@ -278,17 +332,19 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: 140,
-    height:120,
+    height: 140,
     backgroundColor: AppColors.white,
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5
   },
   categoryIconWrap: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: AppColors.periwinkleBg,
+    backgroundColor: "#b7d2ff",
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,

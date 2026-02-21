@@ -16,8 +16,12 @@ type AuthContextType = {
   user: User | null;
   isLoggedIn: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, phone:string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  activeSessionId: string | null;
+  activeLawyerId: string | null;
+  trackActiveSession: (sessionId: string, lawyerId: string) => Promise<void>;
+  clearActiveSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,20 +29,49 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [hasCompletedSplash, setHasCompletedSplash] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeLawyerId, setActiveLawyerId] = useState<string | null>(null);
 
   const isLoggedIn = !!user;
+
+  const SESSION_ID_KEY = "active_session_data";
+
+  const trackActiveSession = useCallback(async (sessionId: string, lawyerId: string) => {
+    setActiveSessionId(sessionId);
+    setActiveLawyerId(lawyerId);
+    await tokenStorage.setActiveSessionData(JSON.stringify({ sessionId, lawyerId }));
+  }, []);
+
+  const clearActiveSession = useCallback(async () => {
+    setActiveSessionId(null);
+    setActiveLawyerId(null);
+    await tokenStorage.clearActiveSessionData();
+  }, []);
 
   /* =============================
      RESTORE SESSION
   ============================== */
   useEffect(() => {
     const restoreSession = async () => {
-      const token = await tokenStorage.getAccessToken();
+      try {
+        const token = await tokenStorage.getAccessToken();
 
-      if (token) {
-        // OPTIONAL:
-        // Later create GET /auth/me to fetch user
-        // For now just assume logged in
+        if (token) {
+          const userProfile = await authService.getProfile();
+          setUser(userProfile);
+
+          const storedData = await tokenStorage.getActiveSessionData();
+          if (storedData) {
+            const { sessionId, lawyerId } = JSON.parse(storedData);
+            setActiveSessionId(sessionId);
+            setActiveLawyerId(lawyerId);
+          }
+        }
+      } catch (err) {
+        console.log("RESTORE SESSION ERROR", err);
+        await tokenStorage.clear();
+      } finally {
+        setHasCompletedSplash(true);
       }
     };
 
@@ -95,6 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         signUp,
         logout,
+        activeSessionId,
+        activeLawyerId,
+        trackActiveSession,
+        clearActiveSession,
       }}
     >
       {children}

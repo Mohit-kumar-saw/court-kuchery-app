@@ -38,4 +38,30 @@ export const tokenStorage = {
       await SecureStore.deleteItemAsync(REFRESH_KEY);
     }
   },
+
+  async setActiveSessionData(data: string) {
+    const key = 'active_session_data';
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, data);
+    } else {
+      await SecureStore.setItemAsync(key, data);
+    }
+  },
+
+  async getActiveSessionData() {
+    const key = 'active_session_data';
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+
+  async clearActiveSessionData() {
+    const key = 'active_session_data';
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  }
 };

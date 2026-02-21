@@ -37,12 +37,15 @@ type Message = {
   timestamp: Date;
 };
 
+import { useAuth } from "@/contexts";
+
 export default function ChatScreen() {
   const { id, sessionId } = useLocalSearchParams<{
     id: string;
     sessionId?: string;
   }>();
 
+  const { trackActiveSession, clearActiveSession } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
@@ -55,10 +58,18 @@ export default function ChatScreen() {
   const [summaryVisible, setSummaryVisible] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   const [sessionActive, setSessionActive] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [declineMessage, setDeclineMessage] = useState<string | null>(null);
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(
     sessionId ?? null
   );
+
+  useEffect(() => {
+    if (activeSessionId && id) {
+      trackActiveSession(activeSessionId, id);
+    }
+  }, [activeSessionId, id]);
 
   /* ================= REVIEW SUBMISSION STATE ================= */
   const [rating, setRating] = useState(0);
@@ -94,6 +105,33 @@ export default function ChatScreen() {
     fetchLawyer();
   }, [id]);
 
+  /* ================= FETCH HISTORY ================= */
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!activeSessionId) return;
+      try {
+        const res = await consultService.getSessionMessages(activeSessionId);
+        const history: Message[] = res.messages.map((m: any) => ({
+          id: m._id,
+          type: "message",
+          text: m.content,
+          sender: m.senderRole === "USER" ? "me" : "lawyer",
+          timestamp: new Date(m.createdAt),
+        }));
+        setChatItems((prev) => {
+          // Keep welcome message, then add history
+          const welcome = prev.filter(m => m.id === "1");
+          return [...welcome, ...history];
+        });
+      } catch (err) {
+        console.log("HISTORY ERROR", err);
+      }
+    };
+
+    fetchHistory();
+  }, [activeSessionId]);
+
   /* ================= INIT & JOIN SOCKET ================= */
 
   useEffect(() => {
@@ -117,13 +155,14 @@ export default function ChatScreen() {
 
         // 2. Add Listeners
         socketInstance.on("RECEIVE_MESSAGE", (msg: any) => {
+          console.log("📥 User received message:", msg);
           setChatItems((prev) => [
             ...prev,
             {
               id: msg._id,
               type: "message",
               text: msg.content,
-              sender: msg.senderRole === "USER" ? "me" : "lawyer",
+              sender: msg.senderRole?.toUpperCase() === "USER" ? "me" : "lawyer",
               timestamp: new Date(msg.createdAt),
             },
           ]);
@@ -146,6 +185,19 @@ export default function ChatScreen() {
           setSummary(data);
           setSummaryVisible(true);
           setActiveSessionId(null);
+        });
+
+        socketInstance.on("CONSULT_ACCEPTED", (data: any) => {
+          console.log("✅ CONSULT ACCEPTED", data);
+          setIsConnecting(false);
+          setSessionActive(true);
+        });
+
+        socketInstance.on("CONSULT_DECLINED", (data: any) => {
+          console.log("❌ CONSULT DECLINED", data);
+          setIsConnecting(false);
+          setSessionActive(false);
+          setDeclineMessage(data.reason || "Lawyer declined the request");
         });
 
         // 3. Join Room (Only if we have a session ID)
@@ -185,7 +237,9 @@ export default function ChatScreen() {
   useEffect(() => {
     if (sessionId) {
       setActiveSessionId(sessionId);
-      setSessionActive(true);
+      // 🔥 If we have a sessionId, it means we just requested it
+      setIsConnecting(true);
+      setSessionActive(false);
     }
   }, [sessionId]);
 
@@ -196,6 +250,11 @@ export default function ChatScreen() {
 
     const socket = getSocket();
     if (!socket) return;
+
+    console.log("📤 User sending message:", {
+      sessionId: activeSessionId,
+      content: inputText,
+    });
 
     socket.emit("SEND_MESSAGE", {
       sessionId: activeSessionId,
@@ -214,12 +273,27 @@ export default function ChatScreen() {
     try {
       const res = await consultService.endSession(activeSessionId);
 
+      await clearActiveSession();
       setSessionActive(false);
       setSummary(res);
       setSummaryVisible(true);
       setActiveSessionId(null);
     } catch (err) {
       console.log("END ERROR", err);
+    }
+  };
+
+  const handleCancelConsult = async () => {
+    if (!activeSessionId) return;
+    try {
+      await consultService.cancelSession(activeSessionId);
+      await clearActiveSession();
+      setIsConnecting(false);
+      router.back();
+    } catch (err) {
+      console.log("CANCEL ERROR", err);
+      await clearActiveSession();
+      router.back();
     }
   };
 
@@ -409,7 +483,8 @@ export default function ChatScreen() {
 
             <Pressable
               style={styles.skipBtn}
-              onPress={() => {
+              onPress={async () => {
+                await clearActiveSession();
                 setSummaryVisible(false);
                 router.back();
               }}
@@ -418,6 +493,32 @@ export default function ChatScreen() {
             </Pressable>
 
           </View>
+        </View>
+      )}
+
+      {/* 🔹 CONNECTING OVERLAY */}
+      {isConnecting && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.overlayText}>Connecting to Lawyer...</Text>
+          <Text style={styles.overlaySub}>Please wait while Adv. {safeLawyer.name} accepts your request.</Text>
+
+          <Pressable style={styles.cancelLink} onPress={handleCancelConsult}>
+            <Text style={styles.cancelLinkText}>Cancel</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* 🔹 DECLINED OVERLAY */}
+      {declineMessage && (
+        <View style={styles.overlay}>
+          <Ionicons name="close-circle" size={60} color="#ff4d4f" />
+          <Text style={styles.overlayText}>Lawyer Busy</Text>
+          <Text style={styles.overlaySub}>{declineMessage}</Text>
+
+          <Pressable style={styles.closeBtn} onPress={() => router.back()}>
+            <Text style={styles.closeBtnText}>Close</Text>
+          </Pressable>
         </View>
       )}
     </View>
@@ -609,5 +710,49 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 10,
     alignItems: "center",
+  },
+
+  /* OVERLAYS */
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+    zIndex: 1000,
+  },
+  overlayText: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    marginTop: 20,
+    textAlign: "center",
+  },
+  overlaySub: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  cancelLink: {
+    marginTop: 40,
+    padding: 10,
+  },
+  cancelLinkText: {
+    color: "#ff4d4f",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  closeBtn: {
+    marginTop: 30,
+    backgroundColor: "#fff",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  closeBtnText: {
+    color: "#1e40af",
+    fontWeight: "700",
   },
 });

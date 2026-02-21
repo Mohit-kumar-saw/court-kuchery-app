@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { lawyerService } from "@/services/lawyerService";
@@ -31,12 +31,23 @@ type Lawyer = {
 
 export default function LawyersScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [activePill, setActivePill] =
     useState<"All" | "Family" | "Criminal" | "Cyber">("All");
+
+  useEffect(() => {
+    if (params.category) {
+      const cat = params.category as string;
+      // Map "Family" -> "Family", etc.
+      if (["Family", "Criminal", "Cyber"].includes(cat)) {
+        setActivePill(cat as any);
+      }
+    }
+  }, [params.category]);
 
   const [showFilter, setShowFilter] = useState(false);
 
